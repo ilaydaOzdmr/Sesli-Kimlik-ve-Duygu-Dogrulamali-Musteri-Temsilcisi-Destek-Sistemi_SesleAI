@@ -60,10 +60,7 @@ class LibriSpeechDataHandler:
         speaker_data = defaultdict(list)
         for file_path in self.all_audio_files:
             # Dosya yolundan konuşmacı ID'sini çıkarır
-            # Örneğin: .../19/198/19-198-0000.flac -> '19'
             speaker_id = os.path.basename(os.path.dirname(os.path.dirname(file_path)))
-            
-            # Konuşmacının SPEAKERS.TXT dosyasında olup olmadığını kontrol et
             if speaker_id in self.speaker_ids:
                 speaker_data[speaker_id].append(file_path)
 

@@ -3,10 +3,10 @@ import './App.css';
 import toWav from 'audiobuffer-to-wav';
 import AudioVisualizer from './AudioVisualizer.jsx';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faMicrophone, faStop, faUserPlus, faUserCheck, faArrowLeft, faCheck, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { faMicrophone, faStop, faUserPlus, faArrowLeft, faCheck, faTimes, faPlus, faX } from '@fortawesome/free-solid-svg-icons';
 import logo from './DualMind_Logo.png';
 
-const ManagementPage = ({ verification, onBack }) => {
+const ManagementPage = ({ verification, onBack, onOpenEmotion }) => {
   // Seed subscribers: 5 Hat Sahibi + 5 Kullanıcı (same numbers, different names, same package)
   const SEED_SUBSCRIBERS = [
     { basePhone: '05327678989', role: 'owner', fullName: 'Mehmet Şimşek', packageName: 'GNC 30 GB' },
@@ -18,6 +18,7 @@ const ManagementPage = ({ verification, onBack }) => {
     { basePhone: '05325556677', role: 'owner', fullName: 'Fatma Kaya',     packageName: 'Super 10 GB' },
     { basePhone: '05325556677', role: 'user',  fullName: 'Mert Kaya',      packageName: 'Super 10 GB' },
     { basePhone: '05329991122', role: 'owner', fullName: 'Zeynep Acar',    packageName: 'GNC 8 GB' },
+    { basePhone: '05418065249', role: 'owner', fullName: 'İlayda Özdemir',    packageName: 'GNC 30 GB' },
     { basePhone: '05329991122', role: 'user',  fullName: 'Burak Acar',     packageName: 'GNC 8 GB' },
   ].map(s => ({
     ...s,
@@ -27,20 +28,34 @@ const ManagementPage = ({ verification, onBack }) => {
 
   const [status, setStatus] = useState('Hazır');
   const [result, setResult] = useState(null);
+  const [showPopup, setShowPopup] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef(null);
   const [audioData, setAudioData] = useState(null);
-  const [speakerName, setSpeakerName] = useState(verification?.inputName || '');
   const [selectedFiles, setSelectedFiles] = useState([]);
-  const [role, setRole] = useState('owner'); // 'owner' (Hat Sahibi) | 'user' (Kullanıcı)
+  const [formData, setFormData] = useState({
+    fullName: '',
+    phoneNumber: '',
+    role: 'owner',
+    packageName: 'GNC 30 GB'
+  });
+  const [subscribers, setSubscribers] = useState(() => {
+    // localStorage'dan kayıtlı aboneleri yükle
+    const saved = localStorage.getItem('subscribers');
+    return saved ? JSON.parse(saved) : [];
+  });
   const API_URL = 'http://localhost:8000';
 
-  // Determine current profile from verification result (preferred) or current inputs
-  const currentCombined = verification?.expectedName
-    || (speakerName ? `${speakerName}${role === 'owner' ? 'HatSahibi' : 'Kullanici'}` : null);
+  // Tüm aboneleri birleştir (SEED + Yeni eklenenler)
+  const allSubscribers = [
+    ...SEED_SUBSCRIBERS,
+    ...subscribers
+  ];
+  const currentCombined = verification?.expectedName;
   const currentProfile = currentCombined
-    ? SEED_SUBSCRIBERS.find(s => s.combinedName === currentCombined)
+    ? allSubscribers.find(s => s.combinedName === currentCombined)
     : null;
+
 
   const handleRecordStart = async () => {
     if (isRecording) return;
@@ -60,10 +75,11 @@ const ManagementPage = ({ verification, onBack }) => {
         const wavBuffer = toWav(audioBuffer);
         const wavBlob = new Blob([wavBuffer], { type: 'audio/wav' });
         const wavFile = new File([wavBlob], 'recorded_audio.wav', { type: 'audio/wav' });
-        stream.getTracks().forEach(track => track.stop());
+        const tracks = stream.getTracks();
+        tracks.forEach(track => track.stop());
         setAudioData(null);
         setSelectedFiles(prev => [...prev, wavFile]);
-        setStatus('Kayıt eklendi. Göndermek için Kayıt/Güncelle butonlarını kullanın.');
+        setStatus('Kayıt eklendi. Göndermek için Kaydet butonunu kullanın.');
       };
 
       mediaRecorderRef.current.start();
@@ -91,75 +107,66 @@ const ManagementPage = ({ verification, onBack }) => {
     }
   };
 
-  const handleRegister = async () => {
-    if (!speakerName || selectedFiles.length === 0) {
-      setStatus('Lütfen bir isim girin ve ses kaydedin/yükleyin.');
+  const handleSave = async () => {
+    if (!formData.fullName || !formData.phoneNumber || selectedFiles.length === 0) {
+      setStatus('Lütfen tüm alanları doldurun ve ses kaydedin/yükleyin.');
       return;
     }
-    const suffix = role === 'owner' ? 'HatSahibi' : 'Kullanici';
-    const combinedName = `${speakerName}${suffix}`;
-    const formData = new FormData();
-    formData.append('name', combinedName);
-    formData.append('role', role);
+    const suffix = formData.role === 'owner' ? 'HatSahibi' : 'Kullanici';
+    const combinedName = `${formData.phoneNumber}${suffix}`;
+    const apiFormData = new FormData();
+    apiFormData.append('name', combinedName);
+    apiFormData.append('role', formData.role);
     selectedFiles.forEach((file, idx) => {
       const ext = (file.type && file.type.split('/')[1]) || 'wav';
-      formData.append('audio_files', file, `${speakerName}_${idx}.${ext}`);
+      apiFormData.append('audio_files', file, `${formData.phoneNumber}_${idx}.${ext}`);
     });
     
-    try {
-      const response = await fetch(`${API_URL}/register/?name=${combinedName}&role=${role}`, { method: 'POST', body: formData });
-      const data = await response.json();
-      if (response.ok) {
-        setStatus(`Konuşmacı '${combinedName}' başarıyla kaydedildi!`);
-        setResult({ type: 'success', message: `Konuşmacı '${combinedName}' başarıyla kaydedildi!` });
-      } else {
-        setStatus('Kayıt işlemi başarısız oldu.');
-        setResult({ type: 'error', message: data.error || 'Bilinmeyen Hata' });
-      }
-    } catch (error) {
-      console.error('Kayıt API çağrısı sırasında hata:', error);
-      setStatus('Sunucuya bağlanırken hata oluştu.');
-      setResult({ type: 'error', message: 'Sunucuya bağlanırken hata oluştu.' });
-    }
+     try {
+       const response = await fetch(`${API_URL}/register/?name=${combinedName}&role=${formData.role}`, { method: 'POST', body: apiFormData });
+       const data = await response.json();
+       if (response.ok) {
+         // Sözlük yapısına kaydet
+         const newSubscriber = {
+           basePhone: formData.phoneNumber,
+           role: formData.role,
+           fullName: formData.fullName,
+           packageName: formData.packageName,
+           suffix: suffix,
+           combinedName: combinedName
+         };
+         
+         setSubscribers(prev => {
+           const updated = [...prev, newSubscriber];
+           // localStorage'a kaydet
+           localStorage.setItem('subscribers', JSON.stringify(updated));
+           console.log('Yeni Eklenen Aboneler:', updated);
+           console.log('Tüm Aboneler (SEED + Yeni):', [...SEED_SUBSCRIBERS, ...updated]);
+           return updated;
+         });
+         
+         setStatus(`Konuşmacı '${combinedName}' başarıyla kaydedildi!`);
+         setResult({ type: 'success', message: `Konuşmacı '${combinedName}' başarıyla kaydedildi!` });
+         setShowPopup(false);
+         setSelectedFiles([]);
+         setFormData({ fullName: '', phoneNumber: '', role: 'owner', packageName: 'GNC 30 GB' });
+       } else {
+         setStatus('Kayıt işlemi başarısız oldu.');
+         setResult({ type: 'error', message: data.error || 'Bilinmeyen Hata' });
+       }
+     } catch (error) {
+       console.error('Kayıt API çağrısı sırasında hata:', error);
+       setStatus('Sunucuya bağlanırken hata oluştu.');
+       setResult({ type: 'error', message: 'Sunucuya bağlanırken hata oluştu.' });
+     }
   };
 
-  const handleUpdate = async () => {
-    if (!speakerName || selectedFiles.length === 0) {
-      setStatus('Lütfen bir isim girin ve ses kaydedin/yükleyin.');
-      return;
-    }
-    const suffix = role === 'owner' ? 'HatSahibi' : 'Kullanici';
-    const combinedName = `${speakerName}${suffix}`;
-    const formData = new FormData();
-    formData.append('name', combinedName);
-    formData.append('role', role);
-    selectedFiles.forEach((file, idx) => {
-      const ext = (file.type && file.type.split('/')[1]) || 'wav';
-      formData.append('audio_files', file, `${speakerName}_${idx}.${ext}`);
-    });
-    
-    try {
-      const response = await fetch(`${API_URL}/update_speaker/?name=${combinedName}&role=${role}`, { method: 'POST', body: formData });
-      const data = await response.json();
-      if (response.ok) {
-        setStatus(`Konuşmacı '${combinedName}' başarıyla güncellendi!`);
-        setResult({ type: 'success', message: `Konuşmacı '${combinedName}' başarıyla güncellendi!` });
-      } else {
-        setStatus('Güncelleme işlemi başarısız oldu.');
-        setResult({ type: 'error', message: data.error || 'Bilinmeyen Hata' });
-      }
-    } catch (error) {
-      console.error('Güncelleme API çağrısı sırasında hata:', error);
-      setStatus('Sunucuya bağlanırken hata oluştu.');
-      setResult({ type: 'error', message: 'Sunucuya bağlanırken hata oluştu.' });
-    }
-  };
 
   return (
     <div className="App">
       <div className="container">
         <img src={logo} alt="Sesli AI Logosu" className="logo" />
-        <h1>Sonuç ve Konuşmacı Yönetimi</h1>
+        <h1>Konuşmacı Yönetimi(Müşteri Temsilcisi Sayfası)</h1>
 
         {currentProfile && (
           <div className="user-info">
@@ -186,56 +193,124 @@ const ManagementPage = ({ verification, onBack }) => {
           </div>
         )}
 
-        <p className="subtitle">Kayıt veya güncelleme yapmak için aşağıdan ses yükleyin ya da kaydedin.</p>
+        <p className="subtitle">Yeni kayıt eklemek için aşağıdaki butona tıklayın.</p>
 
         <div className="controls">
-          <div className="speaker-input-container">
-            <input type="text" placeholder="Konuşmacı adı" value={speakerName} onChange={(e) => setSpeakerName(e.target.value)} className="speaker-input" />
-            <select className="role-select-small" value={role} onChange={(e) => setRole(e.target.value)}>
-              <option value="owner">Hat Sahibi</option>
-              <option value="user">Kullanıcı</option>
-            </select>
-            {!isRecording && (
-              <button className="button small-button record-button" onClick={handleRecordStart}>
-                <FontAwesomeIcon icon={faMicrophone} />
-              </button>
-            )}
-            {isRecording && (
-              <button className="button small-button stop-button recording" onClick={handleRecordStop}>
-                <FontAwesomeIcon icon={faStop} />
-              </button>
-            )}
-          </div>
+          <button className="button" onClick={() => setShowPopup(true)}>
+            <FontAwesomeIcon icon={faPlus} style={{ marginRight: '8px' }} />Kayıt Ekle
+          </button>
 
-          <input type="file" id="audio-upload" accept="audio/*" multiple onChange={handleFileUpload} style={{ display: 'none' }} />
-          <label htmlFor="audio-upload" className="button">Dosya Yükle</label>
-
-          <div className="action-row">
-            <button className="button" onClick={handleRegister} disabled={!speakerName || selectedFiles.length === 0}>
-              <FontAwesomeIcon icon={faUserPlus} style={{ marginRight: '8px' }} />Yeni Kayıt
-            </button>
-            <button className="button emotion-button" onClick={handleUpdate} disabled={!speakerName || selectedFiles.length === 0}>
-              <FontAwesomeIcon icon={faUserCheck} style={{ marginRight: '8px' }} />Mevcut Kaydı Güncelle
-            </button>
-          </div>
+          <button className="button" onClick={onOpenEmotion}>
+            Duygu Doğrulama
+          </button>
 
           <button className="button emotion-button" onClick={onBack}>
             <FontAwesomeIcon icon={faArrowLeft} style={{ marginRight: '8px' }} />Doğrulamaya Dön
           </button>
         </div>
 
-        {isRecording && audioData && <AudioVisualizer audioData={audioData} />}
         <div className="status">Durum: <span>{status}</span></div>
-        {selectedFiles.length > 0 && (
-          <div className="file-info">
-            🎵 Seçilen Dosyalar: <strong>{selectedFiles.map(f => f.name).join(', ')}</strong>
+        {result && (<div className={`result result-${result.type}`}>{result.message}</div>)}
+
+        {/* Popup Modal */}
+        {showPopup && (
+          <div className="popup-overlay">
+            <div className="popup-content">
+              <div className="popup-header">
+                <h2>Yeni Kayıt Ekle</h2>
+                <button className="close-button" onClick={() => setShowPopup(false)}>
+                  <FontAwesomeIcon icon={faX} />
+                </button>
+              </div>
+              
+              <div className="popup-body">
+                <div className="form-group">
+                  <label>Ad Soyad:</label>
+                  <input 
+                    type="text" 
+                    value={formData.fullName} 
+                    onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+                    placeholder="Ad Soyad girin"
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label>Telefon Numarası:</label>
+                  <input 
+                    type="text" 
+                    value={formData.phoneNumber} 
+                    onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})}
+                    placeholder="0532XXXXXXXX"
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label>Rol:</label>
+                  <select value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})}>
+                    <option value="owner">Hat Sahibi</option>
+                    <option value="user">Kullanıcı</option>
+                  </select>
+                </div>
+                
+                <div className="form-group">
+                  <label>Paket:</label>
+                  <select value={formData.packageName} onChange={(e) => setFormData({...formData, packageName: e.target.value})}>
+                    <option value="GNC 30 GB">GNC 30 GB</option>
+                    <option value="GNC 20 GB">GNC 20 GB</option>
+                    <option value="Platinum 40 GB">Platinum 40 GB</option>
+                    <option value="Super 10 GB">Super 10 GB</option>
+                    <option value="GNC 8 GB">GNC 8 GB</option>
+                  </select>
+                </div>
+
+                <div className="audio-controls">
+                  <div className="recording-controls">
+                    {!isRecording && (
+                      <button className="button small-button record-button" onClick={handleRecordStart}>
+                        <FontAwesomeIcon icon={faMicrophone} />
+                        Kayıt Başlat
+                      </button>
+                    )}
+                    {isRecording && (
+                      <button className="button small-button stop-button recording" onClick={handleRecordStop}>
+                        <FontAwesomeIcon icon={faStop} />
+                        Kayıt Durdur
+                      </button>
+                    )}
+                  </div>
+
+                  <input type="file" id="audio-upload-popup" accept="audio/*" multiple onChange={handleFileUpload} style={{ display: 'none' }} />
+                  <label htmlFor="audio-upload-popup" className="button">Dosya Yükle</label>
+                </div>
+
+                {isRecording && audioData && <AudioVisualizer audioData={audioData} />}
+                
+                {selectedFiles.length > 0 && (
+                  <div className="file-info">
+                    🎵 Seçilen Dosyalar: <strong>{selectedFiles.map(f => f.name).join(', ')}</strong>
+                  </div>
+                )}
+              </div>
+              
+              <div className="popup-footer">
+                <button className="button" onClick={() => setShowPopup(false)}>
+                  İptal
+                </button>
+                <button 
+                  className="button emotion-button" 
+                  onClick={handleSave}
+                  disabled={!formData.fullName || !formData.phoneNumber || selectedFiles.length === 0}
+                >
+                  <FontAwesomeIcon icon={faUserPlus} style={{ marginRight: '8px' }} />
+                  Kaydet
+                </button>
+              </div>
+            </div>
           </div>
         )}
-        {result && (<div className={`result result-${result.type}`}>{result.message}</div>)}
       </div>
     </div>
   );
 };
 
 export default ManagementPage;
-

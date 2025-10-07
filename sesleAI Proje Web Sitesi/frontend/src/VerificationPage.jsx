@@ -17,7 +17,7 @@ const VerificationPage = ({ onVerified }) => {
 
   const sendAudioToApi = async (audioBlob) => {
     if (!speakerName) {
-      setStatus('Lütfen doğrulanacak kişinin adını girin.');
+      setStatus('Lütfen doğrulanacak numarayı girin.');
       return;
     }
 
@@ -102,13 +102,13 @@ const VerificationPage = ({ onVerified }) => {
       <div className="container">
         <img src={logo} alt="Sesli AI Logosu" className="logo" />
         <h1>Kimlik Doğrulama</h1>
-        <p className="subtitle">Sadece isim girin ve ses yükleyin/çekin. Sonuç bir sonraki sayfada gösterilecek.</p>
+        <p className="subtitle">Sadece numara girin ve ses yükleyin ya da kaydedin</p>
 
         <div className="controls">
           <div className="speaker-input-container">
             <input
                 type="text"
-                placeholder="Doğrulanacak kişinin adını girin"
+                placeholder="Doğrulanacak numarayı girin"
                 value={speakerName}
                 onChange={(e) => setSpeakerName(e.target.value)}
                 className="speaker-input"
@@ -142,4 +142,3 @@ const VerificationPage = ({ onVerified }) => {
 };
 
 export default VerificationPage;
-

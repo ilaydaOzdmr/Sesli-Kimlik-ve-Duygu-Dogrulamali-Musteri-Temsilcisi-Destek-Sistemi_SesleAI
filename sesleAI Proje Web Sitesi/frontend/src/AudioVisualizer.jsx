@@ -23,7 +23,7 @@ const AudioVisualizer = ({ audioData }) => {
     const draw = () => {
       requestAnimationFrame(draw);
       analyser.getByteTimeDomainData(dataArray);
-      canvasCtx.fillStyle = '#1a237e';
+      canvasCtx.fillStyle = '#f0f0f0ff';
       canvasCtx.fillRect(0, 0, width, height);
       canvasCtx.lineWidth = 2;
       canvasCtx.strokeStyle = '#ffc107';

@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import './App.css';
 import VerificationPage from './VerificationPage.jsx';
 import ManagementPage from './ManagementPage.jsx';
+import EmotionVerificationPage from './EmotionVerificationPage.jsx';
 
 const App = () => {
   const [currentPage, setCurrentPage] = useState('verify');
@@ -13,9 +14,17 @@ const App = () => {
     setCurrentPage('manage');
   };
 
-  const handleBack = () => {
+  const handleBackToVerify = () => {
     setCurrentPage('verify');
     setVerification(null);
+  };
+
+  const openEmotionPage = () => {
+    setCurrentPage('emotion');
+  };
+
+  const backToManage = () => {
+    setCurrentPage('manage');
   };
   
   return (
@@ -24,7 +33,10 @@ const App = () => {
         <VerificationPage onVerified={handleVerified} />
       )}
       {currentPage === 'manage' && (
-        <ManagementPage verification={verification} onBack={handleBack} />
+        <ManagementPage verification={verification} onBack={handleBackToVerify} onOpenEmotion={openEmotionPage} />
+      )}
+      {currentPage === 'emotion' && (
+        <EmotionVerificationPage verification={verification} onBack={backToManage} />
       )}
     </div>
   );

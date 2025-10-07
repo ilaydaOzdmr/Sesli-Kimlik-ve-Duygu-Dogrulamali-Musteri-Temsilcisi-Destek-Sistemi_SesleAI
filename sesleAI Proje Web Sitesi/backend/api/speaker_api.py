@@ -49,7 +49,7 @@ class SpeakerRecognitionAPI:
         else:
             self.speakers_db = {}
         
-    def _update_label_encoder(self):
+    def _update_label_encoder(self): #Sadece api uygulamalarında güncelleme kullanılabilecek, müşteri hizmetleri tarafında bulunması mantıklı değil.
         if not self.speakers_db:
             self.label_encoder = None
             return

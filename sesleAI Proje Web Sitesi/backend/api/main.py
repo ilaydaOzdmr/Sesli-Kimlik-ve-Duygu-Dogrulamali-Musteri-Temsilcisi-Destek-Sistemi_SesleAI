@@ -82,7 +82,7 @@ async def update_speaker(name: str, audio_files: list[UploadFile] = File(...)):
         temp_audio_path = os.path.join(os.getcwd(), audio_file.filename)
         with open(temp_audio_path, "wb") as f:
             f.write(await audio_file.read())
-        temp_audio_paths.append(temp_audio_path) # Hata burada düzeltildi
+        temp_audio_paths.append(temp_audio_path)
 
     success, message = api.update_speaker(name, temp_audio_paths)
 

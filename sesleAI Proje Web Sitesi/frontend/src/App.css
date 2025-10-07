@@ -257,7 +257,7 @@ body {
   
   .status span {
   font-weight: 700;
-  color: #ffbf00; /* turuncuya yakın sarı vurgu */
+  color: #ffbf00; 
 }
   
   .result {
@@ -328,7 +328,7 @@ body {
 
   .tab-button.active {
   background: linear-gradient(180deg, #1a237e, #0d1b6f);
-  color: #ffeb99; /* sarımsı metin */
+  color: #ffeb99;
   box-shadow: 0 8px 24px rgba(13, 27, 111, 0.18);
 }
 
@@ -340,4 +340,126 @@ body {
 
   .mb-20 {
       margin-bottom: 20px;
+  }
+
+  /* Popup Modal Styles */
+  .popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+
+  .popup-content {
+    background: white;
+    border-radius: 18px;
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.15);
+    border: 1px solid #dbe2f3;
+    max-width: 600px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e6eaf0;
+  }
+
+  .popup-header h2 {
+    margin: 0;
+    font-size: 1.5em;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .close-button {
+    background: none;
+    border: none;
+    font-size: 1.2em;
+    color: #64748b;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+  }
+
+  .close-button:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+  }
+
+  .popup-body {
+    padding: 24px;
+  }
+
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  .form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #374151;
+  }
+
+  .form-group input,
+  .form-group select {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid #dbe2f3;
+    background-color: #f8fafc;
+    color: #0f172a;
+    font-size: 1em;
+    transition: all 0.2s ease;
+  }
+
+  .form-group input:focus,
+  .form-group select:focus {
+    outline: 3px solid rgba(26, 35, 126, 0.25);
+    outline-offset: 2px;
+    border-color: #1a237e;
+  }
+
+  .audio-controls {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #e6eaf0;
+  }
+
+  .recording-controls {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+    align-items: center;
+  }
+
+  .popup-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 20px 24px;
+    border-top: 1px solid #e6eaf0;
+    background: #f8fafc;
+    border-radius: 0 0 18px 18px;
+  }
+
+  .file-info {
+    margin-top: 16px;
+    padding: 12px;
+    background: #f1f5f9;
+    border-radius: 8px;
+    font-size: 0.9em;
+    color: #475569;
   }
