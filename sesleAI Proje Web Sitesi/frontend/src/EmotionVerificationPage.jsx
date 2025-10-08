@@ -6,6 +6,7 @@ import logo from './DualMind_Logo.png';
 const EmotionVerificationPage = ({ onBack, verification }) => {
   const [status, setStatus] = useState('Hazır');
   const [isListening, setIsListening] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const [audioUrl, setAudioUrl] = useState(null);
@@ -13,6 +14,9 @@ const EmotionVerificationPage = ({ onBack, verification }) => {
   const [speechText, setSpeechText] = useState('');
 
   const API_URL = 'http://127.0.0.1:8001';
+
+  // Debug: verification prop'unu kontrol et
+  console.log('EmotionVerificationPage - verification:', verification);
 
   const translateToTr = (label) => {
     if (!label || typeof label !== 'string') return null;
@@ -77,7 +81,42 @@ const EmotionVerificationPage = ({ onBack, verification }) => {
 
   const allSubscribers = useMemo(() => ([...SEED_SUBSCRIBERS, ...subscribers]), [SEED_SUBSCRIBERS, subscribers]);
   const currentCombined = verification?.expectedName;
-  const currentProfile = useMemo(() => currentCombined ? allSubscribers.find(s => s.combinedName === currentCombined) : null, [allSubscribers, currentCombined]);
+  const currentProfile = useMemo(() => {
+    if (currentCombined) {
+      return allSubscribers.find(s => s.combinedName === currentCombined);
+    }
+    // Fallback: İlk kullanıcıyı al
+    return allSubscribers[0] || null;
+  }, [allSubscribers, currentCombined]);
+
+  // Paket bilgileri - localStorage'dan gelen kullanıcıya göre
+  const getPackageInfo = useMemo(() => {
+    if (!currentProfile?.packageName) return null;
+    
+    const packageMap = {
+      'GNC 30 GB': { internet: 30, minutes: 1000, sms: 1000, price: '₺89.90/ay' },
+      'GNC 20 GB': { internet: 20, minutes: 1000, sms: 1000, price: '₺69.90/ay' },
+      'GNC 8 GB': { internet: 8, minutes: 500, sms: 500, price: '₺49.90/ay' },
+      'Platinum 40 GB': { internet: 40, minutes: 1500, sms: 1500, price: '₺119.90/ay' },
+      'Super 10 GB': { internet: 10, minutes: 500, sms: 500, price: '₺59.90/ay' }
+    };
+    
+    const baseInfo = packageMap[currentProfile.packageName] || { internet: 30, minutes: 1000, sms: 1000, price: '₺89.90/ay' };
+    
+    // Rastgele kullanım verileri
+    const getRandomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+    
+    return {
+      name: currentProfile.packageName,
+      price: baseInfo.price,
+      internetTotal: baseInfo.internet,
+      internetUsed: getRandomInt(5, Math.floor(baseInfo.internet * 0.8)),
+      minutesTotal: baseInfo.minutes,
+      minutesUsed: getRandomInt(50, Math.floor(baseInfo.minutes * 0.7)),
+      smsTotal: baseInfo.sms,
+      smsUsed: getRandomInt(20, Math.floor(baseInfo.sms * 0.6))
+    };
+  }, [currentProfile]);
 
   // Emojis ve durum
   const emojis = [
@@ -248,8 +287,150 @@ const EmotionVerificationPage = ({ onBack, verification }) => {
     try { recognition.start(); } catch (_) {}
   };
 
+  // Debug: Sayfa yükleniyor mu kontrol et
+  console.log('EmotionVerificationPage render ediliyor');
+
   return (
     <div className="App">
+      {/* Modern Sidebar Toggle Button */}
+      <button 
+        className="modern-sidebar-toggle" 
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+      >
+        <span className="toggle-icon">📊</span>
+        <span className="toggle-text">Müşteri Detayları</span>
+      </button>
+
+      {/* Sidebar Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="sidebar-overlay" 
+          onClick={() => setSidebarOpen(false)}
+        ></div>
+      )}
+
+      {/* Modern Sidebar */}
+      <div className={`modern-sidebar ${sidebarOpen ? 'open' : ''}`}>
+        <div className="sidebar-header">
+          <div className="header-content">
+            <div className="header-icon">👤</div>
+            <h3>Müşteri Bilgileri</h3>
+          </div>
+          <button 
+            className="close-btn" 
+            onClick={() => setSidebarOpen(false)}
+          >
+            ✕
+          </button>
+        </div>
+        
+        <div className="sidebar-content">
+          {/* Müşteri Bilgileri */}
+          {currentProfile && (
+            <div className="info-section">
+              <h4 className="section-title">👤 Müşteri Bilgileri</h4>
+              <div className="info-grid">
+                <div className="info-item">
+                  <span className="info-label">Ad Soyad</span>
+                  <span className="info-value">{currentProfile.fullName}</span>
+                </div>
+                <div className="info-item">
+                  <span className="info-label">Telefon</span>
+                  <span className="info-value">{currentProfile.basePhone}</span>
+                </div>
+                <div className="info-item">
+                  <span className="info-label">Rol</span>
+                  <span className="info-value">{currentProfile.role === 'owner' ? 'Hat Sahibi' : 'Kullanıcı'}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Paket Bilgileri */}
+          {getPackageInfo && (
+            <div className="info-section">
+              <h4 className="section-title">📦 Mevcut Paket</h4>
+              <div className="package-info">
+                <div className="package-name">{getPackageInfo.name}</div>
+                <div className="package-price">{getPackageInfo.price}</div>
+                <div className="package-features">
+                  🌐 {getPackageInfo.internetTotal}GB internet<br/>
+                  📞 {getPackageInfo.minutesTotal} dk<br/>
+                  💬 {getPackageInfo.smsTotal} SMS
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Kullanım Durumu */}
+          {getPackageInfo && (
+            <div className="info-section">
+              <h4 className="section-title">📊 Kullanım Durumu</h4>
+              <div className="usage-stats">
+                <div className="usage-item">
+                  <div className="usage-header">
+                    <span className="usage-icon">🌐</span>
+                    <span className="usage-label">İnternet</span>
+                    <span className="usage-text">{getPackageInfo.internetUsed}GB / {getPackageInfo.internetTotal}GB</span>
+                  </div>
+                  <div className="usage-bar">
+                    <div 
+                      className="usage-fill internet"
+                      style={{ width: `${(getPackageInfo.internetUsed / getPackageInfo.internetTotal) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+                
+                <div className="usage-item">
+                  <div className="usage-header">
+                    <span className="usage-icon">📞</span>
+                    <span className="usage-label">Dakika</span>
+                    <span className="usage-text">{getPackageInfo.minutesUsed}dk / {getPackageInfo.minutesTotal}dk</span>
+                  </div>
+                  <div className="usage-bar">
+                    <div 
+                      className="usage-fill minutes"
+                      style={{ width: `${(getPackageInfo.minutesUsed / getPackageInfo.minutesTotal) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+                
+                <div className="usage-item">
+                  <div className="usage-header">
+                    <span className="usage-icon">💬</span>
+                    <span className="usage-label">SMS</span>
+                    <span className="usage-text">{getPackageInfo.smsUsed} / {getPackageInfo.smsTotal}</span>
+                  </div>
+                  <div className="usage-bar">
+                    <div 
+                      className="usage-fill sms"
+                      style={{ width: `${(getPackageInfo.smsUsed / getPackageInfo.smsTotal) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Önerilen Paketler */}
+          {activeEmotion && (
+            <div className="info-section">
+              <h4 className="section-title">💡 Önerilen Paketler</h4>
+              <div className="recommendations">
+                {getRecommendations().slice(0, 3).map((rec, idx) => (
+                  <div key={`${rec.title}-${idx}`} className="recommendation-card">
+                    <div className="rec-title">{rec.title}</div>
+                    <div className="rec-price">{rec.price}</div>
+                    <div className="rec-desc">{rec.desc}</div>
+                    <button className="rec-button">Öner</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
       <div className="container">
         <img src={logo} alt="Sesli AI Logosu" className="logo" />
         <h1>Duygu Doğrulama</h1>
